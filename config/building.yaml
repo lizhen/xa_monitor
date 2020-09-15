@@ -1,0 +1,15 @@
+building:
+  area: 1
+  min_height: 10
+  max_height: 5000
+  thickness: 3
+
+path:
+  excel:
+    input: ./import/xa_las_20200825_pos.xlsx
+    output: ./export/xa_{0}.xls
+  las:
+    input: ./import/cloud_zs_20200909.las
+
+ztjs:
+  url: http://www.ztjs.net.cn/
