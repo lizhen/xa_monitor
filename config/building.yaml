@@ -3,6 +3,7 @@ building:
   min_height: 10
   max_height: 5000
   thickness: 3
+  multipoint: 0
 
 path:
   excel:

@@ -25,6 +25,10 @@ class Xlsx(object):
 
     def get_buildings(self, fpath):
         """获取已知建筑坐标"""
+        return self.read_excel(fpath)
+
+    def get_buildings_bak(self, fpath):
+        """获取已知建筑坐标"""
         datas = self.read_excel(fpath)
 
         buildings = [[int(data[0]), int(data[1]), int(data[2]), round(data[3])] for data in datas]
@@ -35,6 +39,7 @@ class Xlsx(object):
         """读取Excel"""
         if fpath.strip() == '':
             print('File path cannot be empty.')
+            return []
 
         try:
             df = pd.read_excel(fpath)
@@ -48,9 +53,11 @@ class Xlsx(object):
         """写入Excel"""
         if fpath.strip() == '':
             print('File path cannot be empty.')
+            return
 
         if len(datas) == 0:
             print('Datas cannot be empty.')
+            return
 
         df = pd.DataFrame(datas, columns=columns)
         df.to_excel(fpath)
