@@ -49,7 +49,7 @@ class Xlsx(object):
             print('加载Excel出错，出错原因：%s' % e)
             return []
 
-    def write_excel(self, fpath, datas, columns=['id', 'x', 'y', 'z']):
+    def write_excel(self, fpath, datas, columns=['id', 'code', 'x', 'y', 'z']):
         """写入Excel"""
         if fpath.strip() == '':
             print('File path cannot be empty.')
@@ -60,4 +60,4 @@ class Xlsx(object):
             return
 
         df = pd.DataFrame(datas, columns=columns)
-        df.to_excel(fpath)
+        df.to_excel(fpath, index=False)
