@@ -10,7 +10,7 @@ path:
     input: ./import/xa_las_20200825_pos.xlsx
     output: ./export/xa_{0}.xls
   las:
-    input: ./import/cloud_zs_20200909.las
+    input: ./import/zs_low_20200909/
 
 ztjs:
   url: http://www.ztjs.net.cn/

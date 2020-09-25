@@ -8,6 +8,7 @@ __author__ = 'liz'
 # @Software: PyCharm
 
 import numpy as np
+from collections import defaultdict
 from datetime import datetime
 from tools.xlsx import Xlsx
 from tools.las import Las
@@ -21,6 +22,7 @@ import logging as log
 1.分析建筑物施工进度；
 2.读取配置文件；
 """
+
 
 def execute():
     print('Start execution:', datetime.now())
@@ -46,7 +48,6 @@ def execute():
     if len(orig_buildings) == 0:
         print('There is no reference point.')
         return
-    BLD_NUM = len(orig_buildings)
     buildings = sort_buildings(orig_buildings, AREA)
 
     """点云信息处理"""
@@ -58,16 +59,19 @@ def execute():
     las = sort_las(orig_las)
 
     """建筑物与点云比较"""
-    buildings_max = compare(buildings, las, BLD_NUM, MAX_HEIGHT)
-    if len(orig_buildings) != len(buildings_max):
+    las_max = compare(buildings, las, len(orig_buildings), MAX_HEIGHT)
+    if len(orig_buildings) != len(las_max):
         log.error('The analysis result does not match the reality.')
         print('The analysis result does not match the reality.')
         return
 
+    """建筑物最大高度"""
+    buildings_max = get_buildings_max(orig_buildings, las_max)
+
+    xlsx.write_excel(str(OUTPUT_EXCEL).format(datetime.date(datetime.today())), buildings_max, ['id', 'code', 'x', 'y', 'z', 'h'])
+
     """建筑物施工进度"""
-    buildings_pro = [[p[0], p[1], p[2], p[3], buildings_max[i], round((buildings_max[i]-p[3])/THICKBESS)] for i, p in enumerate(orig_buildings)]
-    print("buildings process[1-5]:", buildings_pro[:5])
-    xlsx.write_excel(str(OUTPUT_EXCEL).format(datetime.date(datetime.today())), buildings_pro, ['id', 'x', 'y', 'z', 'h', 'f'])
+    buildings_pro = get_buildings_pro(buildings_max, THICKBESS)
 
     print('Analysis of successful!')
     print('Stop execution:', datetime.now())
@@ -75,7 +79,7 @@ def execute():
     """远端接口调用"""
     call_api = input('Do you want to continue making remote interface calls? Proceed (y/n) \n')
     if call_api.upper() == 'Y':
-        buildings_json = json.loads([[p[0], p[5]] for p in buildings_pro])
+        buildings_json = json.loads([[p[0], p[1]] for p in buildings_pro])
         data = Http().post(URL, buildings_json)
         print('data:', data)
         return
@@ -95,9 +99,9 @@ def sort_buildings(orig_buildings, AREA):
     if len(orig_buildings) == 0:
         return orig_buildings
 
-    buildings = [[int(data[0]), int(data[1]), int(data[2]), round(data[3])] for data in orig_buildings]
+    buildings = [[int(data[0]), data[1], int(data[2]), int(data[3]), int(round(data[4]*10*5))] for data in orig_buildings]
     print('orig_buildings[1-5]:', buildings[:5])
-    buildings = [[x << 24 | y & 0xffff, p[0]] for p in buildings for x, y in [(p[1] - AREA, p[2] - AREA), (p[1] - AREA, p[2]), (p[1], p[2] - AREA), (p[1], p[2])]]
+    buildings = [[x << 24 | y & 0xffff, p[0]] for p in buildings for x, y in [(p[2] - AREA, p[3] - AREA), (p[2] - AREA, p[3]), (p[2], p[3] - AREA), (p[2], p[3])]]
     print("new_buildings[1-5]:", buildings[:5])
     buildings = sorted(buildings, key=(lambda x: x[0]))
     print("sorted_buildings[1-5]:", buildings[:5])
@@ -120,6 +124,7 @@ def sort_las(orig_las):
 
 
 def compare(buildings, las, BLD_NUM, MAX_HEIGHT):
+    """建筑物坐标点与点云比较，获取最大点云高度"""
     cnt_bld = np.zeros((BLD_NUM, MAX_HEIGHT))
     ptr_las, len_las = 0, len(las) - 1
     ptr_bld, len_bld = 0, len(buildings) - 1
@@ -138,10 +143,29 @@ def compare(buildings, las, BLD_NUM, MAX_HEIGHT):
         print('Error executing building and point cloud match，Error cause：%s' % e)
         return []
 
-    max_bld = np.argmax(cnt_bld, axis=1) / 50
-    print('Analysis height buildings[1-10]:', max_bld)
+    las_max = np.argmax(cnt_bld, axis=1) / 50
+    print('Analysis height buildings[1-10]:', las_max)
 
-    return max_bld
+    return las_max
+
+
+def get_buildings_max(orig_buildings, las_max):
+    """获取建筑物高度"""
+    buildings_max = [[p[0], p[1], p[2], p[3], p[4], las_max[i]] for i, p in enumerate(orig_buildings)]
+    print("buildings max[1-5]:", buildings_max[:5])
+
+    return buildings_max
+
+
+def get_buildings_pro(buildings_max, THICKBESS):
+    buildings_dict = defaultdict(set)
+    for building in buildings_max:
+        buildings_dict[building[1]].update(building[5:])
+
+    buildings_pro = [[key, int(np.mean(list(value)) / THICKBESS)] for key, value in buildings_dict.items()]
+    print("buildings pro[5]:", buildings_pro[-5:])
+
+    return buildings_pro
 
 
 if __name__ == '__main__':
