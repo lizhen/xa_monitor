@@ -73,13 +73,16 @@ def execute():
     """建筑物施工进度"""
     buildings_pro = get_buildings_pro(buildings_max, THICKBESS)
 
+    xlsx.write_excel(str('./export/xapro_{0}.xls').format(datetime.date(datetime.today())), buildings_pro, ['code', 'f'], True)
+
     print('Analysis of successful!')
     print('Stop execution:', datetime.now())
 
     """远端接口调用"""
     call_api = input('Do you want to continue making remote interface calls? Proceed (y/n) \n')
     if call_api.upper() == 'Y':
-        buildings_json = json.loads([[p[0], p[1]] for p in buildings_pro])
+        buildings_json = json.loads([[++i, p[0], p[1]] for i, p in enumerate(buildings_pro)])
+        print('buildings_json:', buildings_json)
         data = Http().post(URL, buildings_json)
         print('data:', data)
         return
